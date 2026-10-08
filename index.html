@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Stylo Rouge : correcteur IA de devoirs et d'examens, de la 6e à la Terminale.">
+<title>Stylo Rouge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Caveat:wght@600;700&display=swap">
+<style>
+/* Layout : une copie double à carreaux Seyès à gauche (le sujet + la copie), la marge rouge du correcteur à droite (le résultat). */
+:root{
+  --paper:#fbfcff; --paper-2:#f1f4fb; --line:#d6def0; --line-strong:#b9c6e4;
+  --ink:#1d2a4d; --ink-soft:#56607a; --blue:#2848a8; --blue-soft:#e6ecfb;
+  --red:#d42a2a; --red-soft:#fbe9e7; --margin:#e78c8c;
+  --ok:#1f8a4c; --ok-soft:#e3f4ea; --warn:#b86e00; --warn-soft:#fbf0dc; --bad:#c23030; --bad-soft:#fbe6e6; --none:#7a8296; --none-soft:#eef0f4;
+  --shadow:0 1px 2px rgba(29,42,77,.06),0 8px 24px rgba(29,42,77,.07);
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-hand:"Caveat","Comic Sans MS",cursive;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#121829; --paper-2:#192137; --line:#253152; --line-strong:#33426b;
+  --ink:#e6eaf5; --ink-soft:#9ba5c0; --blue:#8aa6ff; --blue-soft:#1d2848;
+  --red:#ff6b62; --red-soft:#3a1d22; --margin:#7a3a40;
+  --ok:#5fd394; --ok-soft:#173326; --warn:#f2b44f; --warn-soft:#3a2c14; --bad:#ff7a72; --bad-soft:#3d1c20; --none:#a0a8bd; --none-soft:#232a3d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#121829; --paper-2:#192137; --line:#253152; --line-strong:#33426b;
+  --ink:#e6eaf5; --ink-soft:#9ba5c0; --blue:#8aa6ff; --blue-soft:#1d2848;
+  --red:#ff6b62; --red-soft:#3a1d22; --margin:#7a3a40;
+  --ok:#5fd394; --ok-soft:#173326; --warn:#f2b44f; --warn-soft:#3a2c14; --bad:#ff7a72; --bad-soft:#3d1c20; --none:#a0a8bd; --none-soft:#232a3d;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25); color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+img{max-width:100%}
+body{background:var(--paper-2);color:var(--ink);font:16px/1.55 var(--f-body);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px);background-size:100% 32px}
+.wrap{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:20px 64px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px;border-radius:6px}
+
+/* En-tête */
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:8px 20px}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:48px;height:48px;flex:none}
+h1{font:800 clamp(28px,4vw,40px)/1 var(--f-display);letter-spacing:-.02em;margin:0}
+h1 em{font-style:normal;color:var(--red)}
+.tag{margin:4px 0 0;color:var(--ink-soft);font-size:15px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+.ghost{background:var(--paper);border:1px solid var(--line-strong);border-radius:999px;padding:8px 14px;cursor:pointer;font-size:14px;font-weight:700}
+.ghost:hover{border-color:var(--blue);color:var(--blue)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Feuille Seyès */
+.sheet{background:var(--paper);border:1px solid var(--line-strong);border-radius:4px;box-shadow:var(--shadow);position:relative;min-width:0;
+  background-image:
+    linear-gradient(90deg,transparent 46px,var(--margin) 46px,var(--margin) 48px,transparent 48px),
+    linear-gradient(var(--line) 1px,transparent 1px);
+  background-size:100% 100%,100% 8px}
+.sheet-in{padding:22px 20px 26px 64px;display:grid;gap:22px}
+@media (max-width:520px){.sheet{background-image:linear-gradient(var(--line) 1px,transparent 1px);background-size:100% 8px}.sheet-in{padding:18px 16px 22px}}
+.step{display:grid;gap:10px;background:var(--paper);border-radius:6px}
+.step-h{display:flex;align-items:baseline;gap:10px}
+.step-n{font:700 22px/1 var(--f-hand);color:var(--red);min-width:22px}
+.step-t{font:700 18px/1.2 var(--f-display);margin:0}
+.hint{color:var(--ink-soft);font-size:13.5px;margin:0}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:700;font-size:14.5px;transition:.15s}
+.chip:hover{border-color:var(--blue)}
+.chip[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:var(--paper)}
+.chip.lv{min-width:58px;text-align:center}
+.cycle{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:700;margin-right:2px;align-self:center}
+
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:grid;gap:6px;font-weight:700;font-size:14px;min-width:0}
+select,input[type=number],input[type=text],textarea{width:100%;background:var(--paper);border:1.5px solid var(--line-strong);border-radius:8px;padding:10px 12px;font-weight:400}
+textarea{resize:vertical;min-height:120px;line-height:1.6;font-size:15px}
+textarea.copy{color:var(--blue);font-size:16px}
+select:focus,input:focus,textarea:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 3px var(--blue-soft)}
+
+.drop{border:2px dashed var(--line-strong);border-radius:10px;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--paper);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--blue);background:var(--blue-soft)}
+.drop b{color:var(--blue)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--line-strong)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;cursor:pointer;font-size:13px;line-height:22px;padding:0}
+
+details.more{border-top:1px dashed var(--line-strong);padding-top:12px}
+details.more summary{cursor:pointer;font-weight:700;color:var(--blue);font-size:14.5px}
+.seg{display:inline-flex;border:1.5px solid var(--line-strong);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:7px 12px;cursor:pointer;font-size:14px;font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+.go{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:center;z-index:2}
+.btn-red{flex:1;background:var(--red);color:#fff;border:0;border-radius:12px;padding:15px 20px;font:800 18px/1 var(--f-display);cursor:pointer;box-shadow:0 6px 18px rgba(212,42,42,.3);display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-red:hover{filter:brightness(1.06)}
+.btn-red:disabled{opacity:.6;cursor:wait}
+.btn-stop{background:var(--paper);border:1.5px solid var(--red);color:var(--red);border-radius:12px;padding:14px 16px;font-weight:700;cursor:pointer}
+
+/* Marge du correcteur */
+.result{position:sticky;top:calc(16px + env(safe-area-inset-top,0px));min-width:0}
+@media (max-width:920px){.result{position:static}}
+.panel{background:var(--paper);border:1px solid var(--line-strong);border-radius:4px;box-shadow:var(--shadow);overflow:hidden}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-h .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--ink-soft)}
+.badge-ex{background:var(--warn-soft);color:var(--warn);font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+.panel-b{padding:20px 18px 24px;display:grid;gap:22px}
+
+.headline{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:center}
+@media (max-width:440px){.headline{grid-template-columns:minmax(0,1fr)}}
+.grade{position:relative;width:150px;height:118px;display:grid;place-items:center;color:var(--red)}
+.grade svg{position:absolute;inset:0;width:100%;height:100%}
+.grade .n{font:700 54px/1 var(--f-hand);transform:rotate(-6deg);white-space:nowrap}
+.grade .n small{font-size:32px}
+.mention{font:700 26px/1.1 var(--f-hand);color:var(--red);margin:0}
+.appre{margin:6px 0 0;font-size:15.5px}
+.meta{color:var(--ink-soft);font-size:13px;margin:0 0 4px}
+
+.bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--none-soft)}
+.bar span{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+h3.sec{font:700 16px/1.2 var(--f-display);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.qs{display:grid;gap:10px}
+.q{border:1px solid var(--line);border-left:5px solid var(--st);border-radius:8px;background:var(--paper);overflow:hidden}
+.q summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px}
+.q summary::-webkit-details-marker{display:none}
+.q .num{font:700 13px/1 var(--f-display);background:var(--st-soft);color:var(--st);padding:6px 8px;border-radius:6px;white-space:nowrap}
+.q .tt{font-weight:700;font-size:14.5px;min-width:0;overflow-wrap:anywhere}
+.q .pts{font:700 22px/1 var(--f-hand);color:var(--red);white-space:nowrap}
+.q .body{padding:0 14px 14px;display:grid;gap:10px;font-size:14.5px}
+.q .body p{margin:0}
+.q .lab{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--ink-soft);display:block;margin-bottom:2px}
+.q .eleve{color:var(--blue);font-style:italic;white-space:pre-wrap}
+.q .com{color:var(--red);font-family:var(--f-hand);font-size:21px;line-height:1.25}
+.q .corr{background:var(--ok-soft);border-radius:6px;padding:10px 12px;white-space:pre-wrap}
+.st-juste{--st:var(--ok);--st-soft:var(--ok-soft)}
+.st-partiel{--st:var(--warn);--st-soft:var(--warn-soft)}
+.st-faux{--st:var(--bad);--st-soft:var(--bad-soft)}
+.st-non_traite{--st:var(--none);--st-soft:var(--none-soft)}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.box{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+.box ul{margin:0;padding-left:18px;display:grid;gap:4px;font-size:14.5px}
+.box.plus h3.sec{color:var(--ok)} .box.minus h3.sec{color:var(--warn)}
+.comps{display:flex;flex-wrap:wrap;gap:8px}
+.comp{font-size:13.5px;padding:5px 10px;border-radius:999px;font-weight:700;background:var(--st-soft);color:var(--st)}
+.st-acquis{--st:var(--ok);--st-soft:var(--ok-soft)} .st-en_cours{--st:var(--warn);--st-soft:var(--warn-soft)} .st-non_acquis{--st:var(--bad);--st-soft:var(--bad-soft)}
+ol.ex{margin:0;padding-left:20px;display:grid;gap:8px;font-size:14.5px}
+ol.ex small{color:var(--ink-soft);display:block}
+
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1.5px solid var(--line-strong);background:var(--paper);border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+
+.ask{display:grid;gap:8px;border-top:1px dashed var(--line-strong);padding-top:16px}
+.ask-row{display:flex;gap:8px}
+.ask-row input{flex:1;min-width:0}
+.answer{white-space:pre-wrap;font-size:14.5px;background:var(--blue-soft);border-radius:8px;padding:12px 14px}
+
+.waiting{display:grid;place-items:center;gap:14px;padding:46px 18px;text-align:center}
+.pen{width:64px;height:64px;animation:write 1.4s ease-in-out infinite}
+@keyframes write{0%,100%{transform:translate(0,0) rotate(-8deg)}50%{transform:translate(14px,4px) rotate(4deg)}}
+@media (prefers-reduced-motion:reduce){.pen{animation:none}}
+.waiting p{margin:0;color:var(--ink-soft)}
+.waiting .phase{font:700 24px/1.2 var(--f-hand);color:var(--red)}
+.stream{max-height:120px;overflow:hidden;font-size:12px;color:var(--ink-soft);text-align:left;width:100%;font-family:ui-monospace,monospace;opacity:.7;mask-image:linear-gradient(transparent,#000 60%)}
+.err{background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:12px 14px;font-weight:700}
+
+.hist{display:grid;gap:8px}
+.hist button{display:flex;justify-content:space-between;gap:10px;text-align:left;width:100%;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:10px 12px;cursor:pointer}
+.hist button:hover{border-color:var(--blue)}
+.hist .hg{font:700 22px/1 var(--f-hand);color:var(--red);white-space:nowrap}
+.hist .hm{font-size:13px;color:var(--ink-soft)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:700;font-size:14px;z-index:9}
+.foot{margin-top:28px;color:var(--ink-soft);font-size:13px;text-align:center}
+
+dialog{border:1px solid var(--line-strong);border-radius:12px;background:var(--paper);color:var(--ink);padding:0;width:min(480px,calc(100vw - 32px));box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(15,20,40,.45)}
+dialog form{display:grid;gap:14px;padding:22px}
+dialog h2{font:800 22px/1.1 var(--f-display);margin:0}
+dialog a{color:var(--blue);font-weight:700}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:var(--paper)}
+#keyPill.warn{border-color:var(--red);color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="2" y="2" width="44" height="44" rx="10" fill="var(--red)"/>
+        <path d="M13 34 L31 12 L37 17 L19 39 L12 41 Z" fill="var(--paper)"/>
+        <path d="M31 12 L37 17" stroke="var(--red)" stroke-width="2"/>
+      </svg>
+      <div>
+        <h1>Stylo <em>Rouge</em></h1>
+        <p class="tag">Correcteur de devoirs et d'examens, de la 6<sup>e</sup> à la Terminale.</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="ghost" id="keyPill" type="button">Configurer l'IA</button>
+      <button class="ghost" id="btnExample" type="button">Charger un exemple</button>
+      <button class="ghost" id="btnReset" type="button">Nouvelle copie</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Copie -->
+    <form class="sheet" id="form" autocomplete="off">
+      <div class="sheet-in">
+        <section class="step">
+          <div class="step-h"><span class="step-n">1</span><h2 class="step-t">Classe et matière</h2></div>
+          <div class="chips" id="levels" role="group" aria-label="Classe"></div>
+          <div class="chips" id="subjects" role="group" aria-label="Matière"></div>
+          <div class="row">
+            <label class="f" for="evalType">Type d'évaluation
+              <select id="evalType"></select>
+            </label>
+            <label class="f" for="total">Noté sur
+              <input id="total" type="number" min="1" max="200" step="1" value="20">
+            </label>
+          </div>
+        </section>
+
+        <section class="step">
+          <div class="step-h"><span class="step-n">2</span><h2 class="step-t">Le sujet</h2></div>
+          <p class="hint">Collez l'énoncé avec le barème si vous l'avez (ex. « Exercice 1 (4 pts) »). Sans barème, il sera proposé automatiquement.</p>
+          <label class="f" for="subject">Énoncé
+            <textarea id="subject" rows="6" placeholder="Exercice 1 (5 points) : …"></textarea>
+          </label>
+        </section>
+
+        <section class="step">
+          <div class="step-h"><span class="step-n">3</span><h2 class="step-t">La copie de l'élève</h2></div>
+          <label class="f" for="answer">Réponses de l'élève
+            <textarea id="answer" class="copy" rows="9" placeholder="Recopiez ou collez ici les réponses de l'élève…"></textarea>
+          </label>
+          <div id="photoZone">
+            <div class="drop" id="drop" tabindex="0" role="button" aria-label="Ajouter des photos de la copie ou du sujet">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              <span><b>Ajouter des photos</b> de la copie ou du sujet (manuscrit accepté) · glisser-déposer ou cliquer</span>
+            </div>
+            <input type="file" id="file" accept="image/*" multiple hidden>
+            <div class="thumbs" id="thumbs" style="margin-top:10px"></div>
+          </div>
+        </section>
+
+        <details class="more" id="more">
+          <summary>Options de correction</summary>
+          <div style="display:grid;gap:14px;margin-top:14px">
+            <label class="f" for="key">Corrigé ou attendus du professeur (facultatif)
+              <textarea id="key" rows="4" placeholder="Réponses attendues, critères, points de vigilance…"></textarea>
+            </label>
+            <div class="f">Destinataire de la correction
+              <div class="seg" id="audience" role="group" aria-label="Destinataire">
+                <button type="button" data-v="eleve" aria-pressed="true">L'élève</button>
+                <button type="button" data-v="prof" aria-pressed="false">Le professeur</button>
+                <button type="button" data-v="parent" aria-pressed="false">Les parents</button>
+              </div>
+            </div>
+            <div class="f">Exigence
+              <div class="seg" id="strict" role="group" aria-label="Exigence">
+                <button type="button" data-v="bienveillante" aria-pressed="false">Bienveillante</button>
+                <button type="button" data-v="standard" aria-pressed="true">Standard</button>
+                <button type="button" data-v="examen" aria-pressed="false">Conditions d'examen</button>
+              </div>
+            </div>
+            <label class="f" style="display:flex;gap:10px;align-items:center;font-weight:400" for="deep">
+              <input type="checkbox" id="deep"> Correction approfondie (plus lente, pour les copies longues ou difficiles)
+            </label>
+          </div>
+        </details>
+
+        <div class="go">
+          <button class="btn-red" id="btnGo" type="submit">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg>
+            Corriger la copie
+          </button>
+          <button class="btn-stop" id="btnStop" type="button" hidden>Arrêter</button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Marge du correcteur -->
+    <aside class="result" aria-live="polite">
+      <div class="panel">
+        <div class="panel-h">
+          <span class="lbl" id="resLabel">Correction</span>
+          <span class="badge-ex" id="exBadge">Exemple</span>
+        </div>
+        <div class="panel-b" id="out"></div>
+      </div>
+      <div class="panel" id="histPanel" style="margin-top:16px" hidden>
+        <div class="panel-h"><span class="lbl">Dernières corrections</span><button class="ghost" id="btnClearHist" type="button" style="padding:4px 10px;font-size:12px">Effacer</button></div>
+        <div class="panel-b"><div class="hist" id="hist"></div></div>
+      </div>
+    </aside>
+  </div>
+  <p class="foot">Les corrections sont produites par une IA (Gemini ou Claude, selon vos réglages). Votre clé reste dans votre navigateur. Elles aident à corriger, sans remplacer le regard du professeur.</p>
+</div>
+
+
+<dialog id="settings" aria-labelledby="sTitle">
+  <form id="sForm" method="dialog">
+    <h2 id="sTitle">Configurer l'IA</h2>
+    <p class="hint">Stylo Rouge appelle l'IA directement depuis votre navigateur. Votre clé est enregistrée uniquement sur cet appareil et n'est envoyée qu'au fournisseur choisi.</p>
+    <label class="f" for="sProvider">Fournisseur
+      <select id="sProvider"><option value="gemini">Google Gemini (gratuit)</option><option value="anthropic">Anthropic Claude</option></select>
+    </label>
+    <label class="f" for="sKey">Clé API
+      <input id="sKey" type="password" autocomplete="off" spellcheck="false" placeholder="Collez votre clé ici">
+    </label>
+    <p class="hint" id="sHelp"></p>
+    <label class="f" for="sModel">Modèle (facultatif)
+      <input id="sModel" type="text" spellcheck="false">
+    </label>
+    <div class="actions" style="justify-content:flex-end">
+      <button type="button" class="btn" id="sCancel">Annuler</button>
+      <button type="submit" class="btn primary">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+<script>
+(() => {
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v; else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) n.append(k);
+  return n;
+};
+
+/* ---------- Données scolaires ---------- */
+const LEVELS = [
+  { id: "6e", label: "6e", cycle: "Collège" }, { id: "5e", label: "5e" }, { id: "4e", label: "4e" }, { id: "3e", label: "3e" },
+  { id: "2nde", label: "2nde", cycle: "Lycée" }, { id: "1re", label: "1re" }, { id: "Tle", label: "Terminale" },
+];
+const COLLEGE = ["Mathématiques", "Français", "Histoire-Géographie", "EMC", "SVT", "Physique-Chimie", "Technologie", "Anglais", "Espagnol", "Allemand", "Latin"];
+const SUBJECTS = {
+  "6e": ["Mathématiques", "Français", "Histoire-Géographie", "EMC", "Sciences et technologie", "Anglais"],
+  "5e": COLLEGE, "4e": COLLEGE, "3e": COLLEGE,
+  "2nde": ["Mathématiques", "Français", "Histoire-Géographie", "EMC", "SVT", "Physique-Chimie", "SES", "SNT", "Anglais", "Espagnol", "Allemand"],
+  "1re": ["Français", "Mathématiques (spé)", "Physique-Chimie (spé)", "SVT (spé)", "SES (spé)", "HGGSP", "HLP", "NSI", "Histoire-Géographie", "Enseignement scientifique", "Anglais", "Espagnol"],
+  "Tle": ["Philosophie", "Mathématiques (spé)", "Physique-Chimie (spé)", "SVT (spé)", "SES (spé)", "HGGSP", "HLP", "NSI", "Histoire-Géographie", "Enseignement scientifique", "Anglais", "Espagnol", "Grand oral (préparation écrite)"],
+};
+const EVALS = {
+  base: ["Contrôle en classe", "Devoir maison", "Interrogation écrite", "Exercice d'entraînement"],
+  "3e": ["Sujet de brevet (DNB)", "Brevet blanc"],
+  "1re": ["Épreuve anticipée de français (EAF)", "Bac blanc", "Commentaire / dissertation"],
+  "Tle": ["Épreuve de bac", "Bac blanc", "Dissertation", "Explication de texte"],
+};
+
+/* ---------- État ---------- */
+const S = { level: "4e", subject: "Mathématiques", audience: "eleve", strict: "standard", images: [], result: null, ctx: null, isExample: true };
+let sample = null, canImages = false, ctl = null;
+
+/* ---------- Exemple ---------- */
+const EX = {
+  level: "4e", subject: "Mathématiques", evalType: "Contrôle en classe", total: 20,
+  subjectText: "Exercice 1 (6 points) — Calculer et donner le résultat sous forme de fraction irréductible :\na) 3/4 + 5/6   b) 7/3 × 9/14   c) (2/5) ÷ (4/15)\n\nExercice 2 (8 points) — Théorème de Pythagore\nLe triangle ABC est rectangle en A, avec AB = 6 cm et AC = 8 cm.\n1) Calculer BC.\n2) Le triangle DEF a pour côtés DE = 5 cm, EF = 12 cm, DF = 14 cm. Est-il rectangle ? Justifier.\n\nExercice 3 (6 points) — Résoudre l'équation 3x − 7 = 2x + 5, puis vérifier la solution.",
+  answer: "Ex 1\na) 3/4 + 5/6 = 8/10 = 4/5\nb) 7/3 × 9/14 = 63/42 = 3/2\nc) 2/5 ÷ 4/15 = 2/5 × 15/4 = 30/20 = 3/2\n\nEx 2\n1) BC² = AB² + AC² = 36 + 64 = 100 donc BC = 10 cm\n2) 5² + 12² = 25 + 144 = 169 et 14² = 196. 169 ≠ 196 donc le triangle n'est pas rectangle.\n\nEx 3\n3x − 2x = 5 + 7\nx = 12",
+  result: {
+    note: 15.5, bareme: 20, mention: "Bon travail !",
+    appreciation: "Les fractions et Pythagore sont bien maîtrisés dans l'ensemble. Une erreur de méthode sur l'addition de fractions et une vérification oubliée te coûtent des points. Avec un peu plus de rigueur, la très bonne note est à ta portée.",
+    questions: [
+      { numero: "1.a", intitule: "Somme de fractions", points: 0, max: 2, statut: "faux", reponse_eleve: "3/4 + 5/6 = 8/10 = 4/5", commentaire: "On n'additionne jamais les dénominateurs ! Il faut d'abord un dénominateur commun.", correction: "3/4 + 5/6 = 9/12 + 10/12 = 19/12" },
+      { numero: "1.b", intitule: "Produit de fractions", points: 2, max: 2, statut: "juste", reponse_eleve: "63/42 = 3/2", commentaire: "Parfait. Astuce : simplifier avant de multiplier évite les grands nombres.", correction: "7/3 × 9/14 = (7×9)/(3×14) = 63/42 = 3/2" },
+      { numero: "1.c", intitule: "Quotient de fractions", points: 2, max: 2, statut: "juste", reponse_eleve: "2/5 × 15/4 = 30/20 = 3/2", commentaire: "Très bien : diviser, c'est multiplier par l'inverse.", correction: "2/5 × 15/4 = 30/20 = 3/2" },
+      { numero: "2.1", intitule: "Calcul de BC", points: 3.5, max: 4, statut: "partiel", reponse_eleve: "BC² = AB² + AC² = 100 donc BC = 10 cm", commentaire: "Calcul juste, mais cite le théorème : « Le triangle ABC est rectangle en A, donc d'après le théorème de Pythagore… »", correction: "ABC est rectangle en A, donc d'après le théorème de Pythagore :\nBC² = AB² + AC² = 6² + 8² = 36 + 64 = 100\nBC = √100 = 10 cm" },
+      { numero: "2.2", intitule: "Le triangle DEF est-il rectangle ?", points: 4, max: 4, statut: "juste", reponse_eleve: "169 ≠ 196 donc pas rectangle", commentaire: "Bonne démarche : tu as bien testé le plus grand côté.", correction: "Le plus grand côté est DF.\nDF² = 196 ; DE² + EF² = 25 + 144 = 169\n196 ≠ 169, donc d'après la contraposée du théorème de Pythagore, DEF n'est pas rectangle." },
+      { numero: "3", intitule: "Équation et vérification", points: 4, max: 6, statut: "partiel", reponse_eleve: "3x − 2x = 5 + 7 ; x = 12", commentaire: "Solution juste, mais la vérification demandée manque.", correction: "3x − 7 = 2x + 5\n3x − 2x = 5 + 7\nx = 12\nVérification : 3×12 − 7 = 29 et 2×12 + 5 = 29. La solution est 12." },
+    ],
+    points_forts: ["Multiplication et division de fractions maîtrisées", "Calculs de Pythagore exacts", "Bonne méthode pour la réciproque"],
+    a_ameliorer: ["Addition de fractions : réduire au même dénominateur", "Toujours citer le théorème utilisé", "Lire toute la consigne (la vérification était demandée)"],
+    conseils: ["Avant de rendre, relis chaque consigne et coche ce qui a été fait.", "Apprends par cœur la phrase type de Pythagore."],
+    competences: [{ nom: "Calculer avec des fractions", niveau: "en_cours" }, { nom: "Théorème de Pythagore", niveau: "acquis" }, { nom: "Résoudre une équation", niveau: "acquis" }, { nom: "Rédiger une démonstration", niveau: "en_cours" }],
+    exercices: [
+      { enonce: "Calculer 2/3 + 1/4 puis 5/6 − 3/8.", objectif: "Dénominateur commun" },
+      { enonce: "Résoudre 5x + 4 = 2x − 11 et vérifier la solution.", objectif: "Équation avec vérification" },
+    ],
+  },
+};
+
+/* ---------- Rendu des choix ---------- */
+function renderLevels() {
+  const box = $("#levels"); box.textContent = "";
+  for (const L of LEVELS) {
+    if (L.cycle) box.append(el("span", { class: "cycle", text: L.cycle }));
+    box.append(el("button", { type: "button", class: "chip lv", "aria-pressed": String(S.level === L.id), text: L.label,
+      onclick: () => { S.level = L.id; if (!SUBJECTS[L.id].includes(S.subject)) S.subject = SUBJECTS[L.id][0]; renderLevels(); renderSubjects(); renderEvals(); } }));
+  }
+}
+function renderSubjects() {
+  const box = $("#subjects"); box.textContent = "";
+  for (const s of SUBJECTS[S.level]) box.append(el("button", { type: "button", class: "chip", "aria-pressed": String(S.subject === s), text: s,
+    onclick: () => { S.subject = s; renderSubjects(); } }));
+}
+function renderEvals(keep) {
+  const sel = $("#evalType"), cur = keep || sel.value; sel.textContent = "";
+  for (const e of [...EVALS.base, ...(EVALS[S.level] || [])]) sel.append(el("option", { value: e, text: e }));
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+function bindSeg(id, key) {
+  const seg = $(id);
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    S[key] = b.dataset.v;
+    for (const x of seg.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+  });
+}
+function setSeg(id, v) { for (const x of $(id).querySelectorAll("button")) x.setAttribute("aria-pressed", String(x.dataset.v === v)); }
+
+/* ---------- Photos ---------- */
+function renderThumbs() {
+  const box = $("#thumbs"); box.textContent = "";
+  S.images.forEach((f, i) => {
+    const url = URL.createObjectURL(f);
+    box.append(el("div", { class: "thumb" }, el("img", { src: url, alt: "Photo " + (i + 1) }),
+      el("button", { type: "button", "aria-label": "Retirer la photo", text: "×", onclick: () => { S.images.splice(i, 1); renderThumbs(); } })));
+  });
+}
+function addFiles(list) {
+  const max = window.__imgMax || 5;
+  for (const f of list) { if (f.type.startsWith("image/") && S.images.length < max) S.images.push(f); }
+  if ([...list].length && S.images.length >= max) toast("Maximum " + max + " photos par correction");
+  renderThumbs();
+}
+const drop = $("#drop"), file = $("#file");
+drop.addEventListener("click", () => file.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } });
+file.addEventListener("change", () => { addFiles(file.files); file.value = ""; });
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
+document.addEventListener("paste", e => { const fs = [...(e.clipboardData?.files || [])]; if (fs.length && canImages) addFiles(fs); });
+
+/* ---------- Utilitaires ---------- */
+const fmt = n => { const v = Math.round(Number(n) * 100) / 100; return String(v).replace(".", ","); };
+let toastT;
+function toast(msg) { document.querySelector(".toast")?.remove(); const t = el("div", { class: "toast", role: "status", text: msg }); document.body.append(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
+const STATUS = { juste: "Juste", partiel: "Partiel", faux: "Faux", non_traite: "Non traité" };
+const COMP = { acquis: "Acquis", en_cours: "En cours", non_acquis: "Non acquis" };
+const levelLabel = id => (LEVELS.find(l => l.id === id) || {}).label || id;
+
+/* ---------- Rendu du résultat ---------- */
+function renderResult(R, ctx, isExample) {
+  S.result = R; S.ctx = ctx; S.isExample = !!isExample;
+  $("#exBadge").hidden = !isExample;
+  $("#resLabel").textContent = "Correction · " + levelLabel(ctx.level) + " · " + ctx.subject;
+  const out = $("#out"); out.textContent = "";
+  const total = Number(R.bareme) || ctx.total || 20;
+  const note = Math.max(0, Math.min(total, Number(R.note) || 0));
+
+  // Note entourée
+  const circle = `<svg viewBox="0 0 150 118" aria-hidden="true"><path d="M20 62 C 14 22, 120 6, 136 48 C 150 92, 52 120, 22 86 C 10 70, 30 40, 60 30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`;
+  const g = el("div", { class: "grade", role: "img", "aria-label": "Note " + fmt(note) + " sur " + fmt(total) });
+  g.innerHTML = circle; const n = el("span", { class: "n" }); n.append(fmt(note), el("small", { text: "/" + fmt(total) })); g.append(n);
+  out.append(el("div", { class: "headline" }, g, el("div", {},
+    el("p", { class: "meta", text: ctx.evalType + " · " + levelLabel(ctx.level) + " · " + ctx.subject }),
+    el("p", { class: "mention", text: R.mention || "" }),
+    el("p", { class: "appre", text: R.appreciation || "" }))));
+
+  // Répartition
+  const Q = Array.isArray(R.questions) ? R.questions : [];
+  if (Q.length) {
+    const sums = { juste: 0, partiel: 0, faux: 0, non_traite: 0 }; let sum = 0;
+    for (const q of Q) { const m = Number(q.max) || 0; sums[q.statut in sums ? q.statut : "faux"] += m; sum += m; }
+    const bar = el("div", { class: "bar", role: "img", "aria-label": "Répartition des points par statut" });
+    const colors = { juste: "var(--ok)", partiel: "var(--warn)", faux: "var(--bad)", non_traite: "var(--none)" };
+    const leg = el("div", { class: "legend" });
+    for (const k of Object.keys(sums)) if (sums[k] > 0) {
+      bar.append(el("span", { style: `width:${(sums[k] / (sum || 1)) * 100}%;background:${colors[k]}` }));
+      const c = Q.filter(q => q.statut === k).length;
+      leg.append(el("span", {}, el("i", { style: "background:" + colors[k] }), `${STATUS[k]} : ${c}`));
+    }
+    out.append(el("div", {}, bar, leg));
+
+    const qs = el("div", { class: "qs" });
+    Q.forEach((q, i) => {
+      const st = q.statut in STATUS ? q.statut : "faux";
+      const d = el("details", { class: "q st-" + st });
+      if (st !== "juste" && i < 12) d.open = true;
+      d.append(el("summary", {},
+        el("span", { class: "num", text: (q.numero ? "Q" + q.numero : "Q" + (i + 1)) + " · " + STATUS[st] }),
+        el("span", { class: "tt", text: q.intitule || "" }),
+        el("span", { class: "pts", text: fmt(q.points) + "/" + fmt(q.max) })));
+      const b = el("div", { class: "body" });
+      if (q.reponse_eleve) b.append(el("p", {}, el("span", { class: "lab", text: "Réponse de l'élève" }), el("span", { class: "eleve", text: q.reponse_eleve })));
+      if (q.commentaire) b.append(el("p", { class: "com", text: q.commentaire }));
+      if (q.correction) b.append(el("div", {}, el("span", { class: "lab", text: "Correction" }), el("div", { class: "corr", text: q.correction })));
+      d.append(b); qs.append(d);
+    });
+    out.append(el("section", {}, el("h3", { class: "sec", text: "Détail question par question" }), qs));
+  }
+
+  const list = (arr) => { const u = el("ul"); for (const x of (arr || [])) u.append(el("li", { text: String(x) })); return u; };
+  if ((R.points_forts || []).length || (R.a_ameliorer || []).length)
+    out.append(el("div", { class: "two" },
+      el("div", { class: "box plus" }, el("h3", { class: "sec", text: "Points forts" }), list(R.points_forts)),
+      el("div", { class: "box minus" }, el("h3", { class: "sec", text: "À travailler" }), list(R.a_ameliorer))));
+
+  if ((R.competences || []).length) {
+    const c = el("div", { class: "comps" });
+    for (const k of R.competences) { const lv = k.niveau in COMP ? k.niveau : "en_cours"; c.append(el("span", { class: "comp st-" + lv, text: k.nom + " · " + COMP[lv] })); }
+    out.append(el("section", {}, el("h3", { class: "sec", text: "Compétences évaluées" }), c));
+  }
+  if ((R.conseils || []).length) out.append(el("section", {}, el("h3", { class: "sec", text: "Conseils méthode" }), el("div", { class: "box" }, list(R.conseils))));
+  if ((R.exercices || []).length) {
+    const ol = el("ol", { class: "ex" });
+    for (const x of R.exercices) ol.append(el("li", {}, String(x.enonce || x), x.objectif ? el("small", { text: "Objectif : " + x.objectif }) : null));
+    out.append(el("section", {}, el("h3", { class: "sec", text: "Pour s'entraîner" }), el("div", { class: "box" }, ol)));
+  }
+
+  // Actions
+  const acts = el("div", { class: "actions" },
+    el("button", { type: "button", class: "btn", text: "Copier la correction", onclick: copyText }),
+    el("button", { type: "button", class: "btn", id: "btnDl", text: "Télécharger (.html)", onclick: download }));
+  out.append(acts);
+  if (!window.__canDl) $("#btnDl").hidden = true;
+
+  // Question de suivi
+  if (sample) {
+    const inp = el("input", { type: "text", id: "askInput", placeholder: "Ex. : réexplique-moi la question 1.a plus simplement" });
+    const ans = el("div", { class: "answer", hidden: "" });
+    const btn = el("button", { type: "button", class: "btn", text: "Demander" });
+    const run = async () => {
+      const q = inp.value.trim(); if (!q) return;
+      btn.disabled = true; ans.hidden = false; ans.textContent = "Réflexion…";
+      try {
+        await sample(`Tu es professeur en ${S.ctx.subject}, classe de ${levelLabel(S.ctx.level)} (système scolaire français). Voici une correction déjà faite (JSON) :\n${JSON.stringify(S.result).slice(0, 60000)}\n\nQuestion ${audienceWord(S.ctx.audience)} : ${q}\n\nRéponds en français, clairement, avec des étapes si utile, adapté au niveau ${levelLabel(S.ctx.level)}. Texte brut sans Markdown (pas d'astérisques ni de #). Utilise les symboles ×, ÷, ², √, ≤ au lieu de LaTeX.`,
+          { cache: false, onText: ({ text }) => { ans.textContent = text; } });
+      } catch (e) { ans.textContent = e.text || errMsg(e.code); }
+      finally { btn.disabled = false; }
+    };
+    btn.addEventListener("click", run);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); run(); } });
+    out.append(el("div", { class: "ask" }, el("h3", { class: "sec", text: "Une question sur la correction ?" }), el("div", { class: "ask-row" }, inp, btn), ans));
+  }
+}
+const audienceWord = a => a === "prof" ? "du professeur" : a === "parent" ? "d'un parent" : "de l'élève";
+
+/* ---------- Export ---------- */
+function asText() {
+  const R = S.result, c = S.ctx; if (!R) return "";
+  const L = [`CORRECTION — ${c.evalType} — ${levelLabel(c.level)} — ${c.subject}`, `Note : ${fmt(R.note)}/${fmt(R.bareme || c.total)}  ${R.mention || ""}`, "", R.appreciation || "", ""];
+  for (const q of R.questions || []) {
+    L.push(`Q${q.numero} — ${q.intitule || ""} : ${fmt(q.points)}/${fmt(q.max)} (${STATUS[q.statut] || q.statut})`);
+    if (q.commentaire) L.push("  Remarque : " + q.commentaire);
+    if (q.correction) L.push("  Correction : " + q.correction.replace(/\n/g, "\n    "));
+    L.push("");
+  }
+  if ((R.points_forts || []).length) L.push("Points forts :", ...R.points_forts.map(x => " - " + x), "");
+  if ((R.a_ameliorer || []).length) L.push("À travailler :", ...R.a_ameliorer.map(x => " - " + x), "");
+  if ((R.conseils || []).length) L.push("Conseils :", ...R.conseils.map(x => " - " + x), "");
+  if ((R.exercices || []).length) L.push("Pour s'entraîner :", ...R.exercices.map((x, i) => ` ${i + 1}. ${x.enonce || x}`));
+  return L.join("\n");
+}
+async function copyText() {
+  const t = asText();
+  try { await navigator.clipboard.writeText(t); toast("Correction copiée"); }
+  catch { const ta = el("textarea", { style: "position:fixed;opacity:0" }); ta.value = t; document.body.append(ta); ta.select(); try { document.execCommand("copy"); toast("Correction copiée"); } catch { toast("Copie impossible ici"); } ta.remove(); }
+}
+async function download() {
+  const dl = window.__dl; if (!dl) return;
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const R = S.result, c = S.ctx;
+  const qs = (R.questions || []).map(q => `<div class="q"><h3>Q${esc(q.numero)} — ${esc(q.intitule)} <span>${fmt(q.points)}/${fmt(q.max)}</span></h3>${q.reponse_eleve ? `<p class="e">${esc(q.reponse_eleve)}</p>` : ""}${q.commentaire ? `<p class="r">${esc(q.commentaire)}</p>` : ""}${q.correction ? `<pre>${esc(q.correction)}</pre>` : ""}</div>`).join("");
+  const li = a => (a || []).map(x => `<li>${esc(x.enonce || x)}</li>`).join("");
+  const html = `<!doctype html><html lang="fr"><meta charset="utf-8"><title>Correction ${esc(c.subject)} ${esc(levelLabel(c.level))}</title><style>body{font:15px/1.55 system-ui,sans-serif;max-width:760px;margin:30px auto;padding:0 16px;color:#1d2a4d}h1{font-size:22px}.n{font-size:40px;color:#d42a2a;font-weight:700}.q{border:1px solid #d6def0;border-radius:8px;padding:10px 14px;margin:10px 0}.q h3{font-size:15px;margin:0 0 6px;display:flex;justify-content:space-between}.q h3 span{color:#d42a2a}.e{color:#2848a8;font-style:italic;white-space:pre-wrap}.r{color:#d42a2a}pre{white-space:pre-wrap;background:#e3f4ea;padding:8px 10px;border-radius:6px;font:inherit}</style><h1>${esc(c.evalType)} · ${esc(levelLabel(c.level))} · ${esc(c.subject)}</h1><p class="n">${fmt(R.note)}/${fmt(R.bareme || c.total)}</p><p><b>${esc(R.mention)}</b> ${esc(R.appreciation)}</p>${qs}<h2>Points forts</h2><ul>${li(R.points_forts)}</ul><h2>À travailler</h2><ul>${li(R.a_ameliorer)}</ul><h2>Conseils</h2><ul>${li(R.conseils)}</ul><h2>Pour s'entraîner</h2><ol>${li(R.exercices)}</ol><p style="color:#777;font-size:12px">Correction générée avec Stylo Rouge.</p></html>`;
+  try { await dl.save({ filename: `correction-${c.level}-${c.subject.replace(/[^\wÀ-ÿ]+/g, "-").toLowerCase()}.html`, data: html }); }
+  catch (e) { if (e && e.code !== "cancelled" && e.code !== "declined") toast("Téléchargement non effectué"); }
+}
+
+/* ---------- Historique (local, propre à cet appareil) ---------- */
+const HK = "stylo-rouge-hist";
+const readHist = () => { try { return JSON.parse(localStorage.getItem(HK) || "[]"); } catch { return []; } };
+function saveHist(entry) { try { const h = readHist(); h.unshift(entry); localStorage.setItem(HK, JSON.stringify(h.slice(0, 12))); } catch {} renderHist(); }
+function renderHist() {
+  const h = readHist(); $("#histPanel").hidden = !h.length; const box = $("#hist"); box.textContent = "";
+  for (const e of h) box.append(el("button", { type: "button", onclick: () => { renderResult(e.result, e.ctx, false); window.scrollTo({ top: 0, behavior: "smooth" }); } },
+    el("span", {}, el("b", { text: levelLabel(e.ctx.level) + " · " + e.ctx.subject }), el("br"), el("span", { class: "hm", text: e.ctx.evalType + " · " + new Date(e.at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })),
+    el("span", { class: "hg", text: fmt(e.result.note) + "/" + fmt(e.result.bareme || e.ctx.total) })));
+}
+$("#btnClearHist").addEventListener("click", () => { try { localStorage.removeItem(HK); } catch {} renderHist(); });
+
+/* ---------- Correction ---------- */
+function errMsg(code) {
+  return ({
+    
+    sampling_disabled: "Claude n'est pas disponible pour ce compte.",
+    rate_limited: "Quota de l'IA atteint pour le moment (limite du niveau gratuit). Réessayez dans quelques minutes.",
+    session_expired: "Votre session a expiré : reconnectez-vous à Claude.",
+    image_rejected: "Une photo n'a pas pu être lue (format ou taille). Essayez une autre photo en JPEG ou PNG.",
+    images_unavailable: "Les photos ne peuvent pas être envoyées ici. Recopiez la copie en texte.",
+    prompt_too_large: "La copie est trop longue. Corrigez-la en plusieurs parties.",
+    refused: "Cette demande n'a pas pu être traitée. Vérifiez le contenu du sujet et de la copie.",
+    invalid_json: "La correction est arrivée dans un format illisible. Cliquez à nouveau sur « Corriger la copie ».",
+    no_key: "Aucune clé API configurée. Cliquez sur « Configurer l'IA » en haut de la page.",
+    bad_key: "La clé API est refusée. Vérifiez-la dans « Configurer l'IA ».",
+    bad_model: "Ce modèle n'existe pas ou n'est pas disponible avec votre clé. Videz le champ Modèle dans « Configurer l'IA ».",
+    empty_completion: "Aucune correction produite. Ajoutez plus de détails au sujet ou à la copie.",
+  })[code] || "La correction a été interrompue (problème de connexion). Réessayez.";
+}
+
+function buildPrompt(ctx, nImg) {
+  const who = { eleve: "à l'élève directement (tutoiement, ton encourageant et précis)", prof: "au professeur (vouvoiement, ton professionnel, synthétique, utile pour annoter)", parent: "aux parents (vouvoiement, ton clair, sans jargon)" }[ctx.audience];
+  const sev = { bienveillante: "Correction bienveillante : valorise la démarche, accorde des points partiels généreusement pour une méthode correcte.", standard: "Correction standard, comme un professeur en classe : points partiels pour une démarche juste avec erreur de calcul.", examen: "Correction en conditions d'examen officiel (brevet / bac) : applique strictement le barème et les attendus officiels, exige justification et rédaction." }[ctx.strict];
+  return `Tu es un professeur expérimenté de l'Éducation nationale française, spécialiste de ${ctx.subject} en classe de ${levelLabel(ctx.level)}. Tu corriges une copie : ${ctx.evalType}.
+
+CONSIGNES DE CORRECTION
+- Respecte les programmes officiels et les attendus du niveau ${levelLabel(ctx.level)}.
+- Note sur ${ctx.total} points. Si l'énoncé contient un barème, applique-le exactement ; sinon, propose un barème cohérent dont la somme des "max" vaut ${ctx.total}.
+- ${sev}
+- Vérifie chaque calcul toi-même avant de juger. Ne pénalise pas deux fois la même erreur (erreur reportée).
+- Pour une rédaction / dissertation / commentaire : découpe en critères (compréhension du sujet, problématique, plan, arguments et exemples, expression et orthographe, conclusion) avec un barème par critère.
+- En langues vivantes : signale les fautes de grammaire et de vocabulaire et donne la forme correcte.
+- La somme des "points" doit être égale à "note". Les points peuvent être des demi-points.
+- Rédige les commentaires en t'adressant ${who}.
+- Écris les mathématiques en texte simple avec ×, ÷, ², ³, √, π, ≤, ≥, ≠, → (pas de LaTeX, pas de Markdown).
+- Si une question n'a pas de réponse dans la copie, statut "non_traite" et 0 point.
+${nImg ? `- ${nImg} photo(s) sont jointes : ce sont des pages de la copie ou du sujet (souvent manuscrites). Lis-les attentivement ; si un passage est illisible, dis-le dans le commentaire.` : ""}
+
+ÉNONCÉ DU SUJET
+"""
+${ctx.subjectText || "(voir les photos jointes)"}
+"""
+
+${ctx.key ? `CORRIGÉ / ATTENDUS DU PROFESSEUR\n"""\n${ctx.key}\n"""\n` : ""}
+COPIE DE L'ÉLÈVE
+"""
+${ctx.answer || "(voir les photos jointes)"}
+"""
+
+FORMAT DE RÉPONSE
+Réponds uniquement avec un objet JSON valide, sans texte autour, de cette forme :
+{"note": nombre, "bareme": ${ctx.total}, "mention": "2 à 5 mots, ex. Très bien !", "appreciation": "2 à 4 phrases d'appréciation générale",
+ "questions": [{"numero": "1.a", "intitule": "titre court de la question ou du critère", "points": nombre, "max": nombre, "statut": "juste" | "partiel" | "faux" | "non_traite", "reponse_eleve": "extrait court de ce qu'a écrit l'élève", "commentaire": "remarque du correcteur, 1 à 2 phrases", "correction": "correction rédigée complète et modèle"}],
+ "points_forts": ["…"], "a_ameliorer": ["…"], "conseils": ["conseils de méthode concrets"],
+ "competences": [{"nom": "compétence du programme", "niveau": "acquis" | "en_cours" | "non_acquis"}],
+ "exercices": [{"enonce": "exercice d'entraînement ciblé sur les erreurs", "objectif": "…"}]}
+Mets 2 à 4 éléments dans points_forts, a_ameliorer, conseils, 3 à 6 compétences et 2 ou 3 exercices.`;
+}
+
+const PHASES = ["Lecture de la copie…", "Vérification des calculs…", "Application du barème…", "Rédaction des remarques…", "Préparation des conseils…"];
+function showWaiting() {
+  const out = $("#out"); out.textContent = "";
+  $("#exBadge").hidden = true; $("#resLabel").textContent = "Correction en cours";
+  const ph = el("p", { class: "phase", text: "Le correcteur prend son stylo…" });
+  const stream = el("div", { class: "stream", "aria-hidden": "true" });
+  out.append(el("div", { class: "waiting" },
+    (() => { const s = el("div"); s.innerHTML = `<svg class="pen" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 54 L44 14 L52 21 L18 61 L8 62 Z" fill="var(--red)"/><path d="M44 14 L48 10 L56 17 L52 21 Z" fill="var(--ink)"/></svg>`; return s.firstChild; })(),
+    ph, el("p", { text: "Une correction détaillée prend en général entre 20 secondes et 2 minutes." }), stream));
+  let i = 0; const t = setInterval(() => { ph.textContent = PHASES[i++ % PHASES.length]; }, 4500);
+  return { stop: () => clearInterval(t), stream };
+}
+
+$("#form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const ctx = {
+    level: S.level, subject: S.subject, evalType: $("#evalType").value, total: Math.max(1, Number($("#total").value) || 20),
+    subjectText: $("#subject").value.trim(), answer: $("#answer").value.trim(), key: $("#key").value.trim(),
+    audience: S.audience, strict: S.strict,
+  };
+  if (!ctx.answer && !S.images.length) { toast("Ajoutez la copie de l'élève (texte ou photo)"); $("#answer").focus(); return; }
+  if (!getCfg().key) { openSettings(); return; }
+
+  const go = $("#btnGo"), stop = $("#btnStop");
+  go.disabled = true; stop.hidden = false;
+  if (window.innerWidth <= 920) $(".result").scrollIntoView({ behavior: "smooth" });
+  const w = showWaiting();
+  ctl = new AbortController();
+  try {
+    const opts = { signal: ctl.signal, modelTier: $("#deep").checked ? "complex" : "default", onText: ({ text }) => { w.stream.textContent = text.slice(-600); } };
+    if (S.images.length && canImages) opts.images = S.images.slice();
+    const R = await sample.json(buildPrompt(ctx, opts.images ? opts.images.length : 0), opts);
+    if (!R || typeof R !== "object" || !("note" in R)) throw { code: "invalid_json" };
+    renderResult(R, ctx, false);
+    saveHist({ at: Date.now(), ctx: { level: ctx.level, subject: ctx.subject, evalType: ctx.evalType, total: ctx.total, audience: ctx.audience }, result: R });
+    toast("Copie corrigée");
+  } catch (err) {
+    if (err && err.code === "cancelled") { if (S.result) renderResult(S.result, S.ctx, S.isExample); else $("#out").textContent = ""; toast("Correction arrêtée"); }
+    else { renderError(errMsg(err && err.code)); if (["no_key","bad_key","bad_model"].includes(err && err.code)) $("#out").append(el("button", { type: "button", class: "btn", text: "Configurer l'IA", onclick: openSettings })); }
+  } finally { w.stop(); go.disabled = false; stop.hidden = true; ctl = null; }
+});
+$("#btnStop").addEventListener("click", () => ctl?.abort());
+function renderError(msg) { $("#resLabel").textContent = "Correction"; $("#exBadge").hidden = true; const o = $("#out"); o.textContent = ""; o.append(el("p", { class: "err", text: msg })); }
+
+/* ---------- Exemple / réinitialisation ---------- */
+function loadExample() {
+  S.level = EX.level; S.subject = EX.subject; renderLevels(); renderSubjects(); renderEvals(EX.evalType);
+  $("#total").value = EX.total; $("#subject").value = EX.subjectText; $("#answer").value = EX.answer; $("#key").value = "";
+  S.images = []; renderThumbs();
+  renderResult(EX.result, { level: EX.level, subject: EX.subject, evalType: EX.evalType, total: EX.total, audience: "eleve" }, true);
+}
+$("#btnExample").addEventListener("click", loadExample);
+$("#btnReset").addEventListener("click", () => {
+  $("#subject").value = ""; $("#answer").value = ""; $("#key").value = ""; S.images = []; renderThumbs();
+  const o = $("#out"); o.textContent = ""; $("#exBadge").hidden = true; $("#resLabel").textContent = "Correction";
+  o.append(el("div", { class: "waiting" }, el("p", { class: "phase", text: "La marge est prête." }), el("p", { text: "Renseignez le sujet et la copie, puis cliquez sur « Corriger la copie »." })));
+  $("#subject").focus();
+});
+
+
+/* ---------- Moteur IA (version GitHub Pages) ---------- */
+const CFG_K = "stylo-rouge-cfg";
+const getCfg = () => { try { return JSON.parse(localStorage.getItem(CFG_K) || "{}"); } catch { return {}; } };
+const setCfg = c => { try { localStorage.setItem(CFG_K, JSON.stringify(c)); } catch {} };
+async function prepImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, ko) => { const i = new Image(); i.onload = () => ok(i); i.onerror = ko; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return { mime: "image/jpeg", b64: c.toDataURL("image/jpeg", 0.85).split(",")[1] };
+  } catch { throw { code: "image_rejected" }; } finally { URL.revokeObjectURL(url); }
+}
+function parseJSON(t) {
+  try { return JSON.parse(t); } catch {}
+  const f = t.match(/```(?:json)?\s*([\s\S]*?)```/); if (f) { try { return JSON.parse(f[1]); } catch {} }
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch {} }
+  throw { code: "invalid_json", text: t };
+}
+async function callLLM(prompt, { images = [], json = false, signal } = {}) {
+  const c = getCfg(); if (!c.key) throw { code: "no_key" };
+  const imgs = []; for (const f of images) imgs.push(await prepImage(f));
+  let res;
+  try {
+    if (c.provider === "anthropic") {
+      const content = [...imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.mime, data: i.b64 } })), { type: "text", text: prompt }];
+      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal,
+        headers: { "content-type": "application/json", "x-api-key": c.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: c.model || "claude-sonnet-4-5", max_tokens: 8000, messages: [{ role: "user", content }] }) });
+    } else {
+      const model = c.model || "gemini-flash-latest";
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(c.key)}`, { method: "POST", signal,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts: [...imgs.map(i => ({ inline_data: { mime_type: i.mime, data: i.b64 } })), { text: prompt }] }],
+          generationConfig: json ? { responseMimeType: "application/json", temperature: 0.2 } : { temperature: 0.4 } }) });
+    }
+  } catch (e) { throw { code: e && e.name === "AbortError" ? "cancelled" : "upstream_error" }; }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const code = res.status === 401 || res.status === 403 || (res.status === 400 && /api key|API_KEY/i.test(JSON.stringify(data))) ? "bad_key" : res.status === 429 ? "rate_limited" : res.status === 404 ? "bad_model" : "upstream_error";
+    throw { code, message: data?.error?.message };
+  }
+  const text = c.provider === "anthropic" ? (data.content || []).filter(b => b.type === "text").map(b => b.text).join("")
+    : (data.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
+  if (!text.trim()) throw { code: data.promptFeedback?.blockReason ? "refused" : "empty_completion" };
+  return text;
+}
+function makeSample() {
+  const f = async (input, o = {}) => { const text = await callLLM(input, { images: o.images || [], signal: o.signal }); o.onText?.({ text, delta: text }); return { text, truncated: false }; };
+  f.json = async (input, o = {}) => { const text = await callLLM(input, { images: o.images || [], json: true, signal: o.signal }); o.onText?.({ text, delta: text }); return parseJSON(text); };
+  return f;
+}
+
+/* ---------- Réglages ---------- */
+const dlg = $("#settings");
+function refreshKeyPill() {
+  const c = getCfg(), p = $("#keyPill");
+  p.textContent = c.key ? (c.provider === "anthropic" ? "IA : Claude" : "IA : Gemini") : "Configurer l'IA";
+  p.classList.toggle("warn", !c.key);
+}
+function openSettings() {
+  const c = getCfg();
+  $("#sProvider").value = c.provider || "gemini"; $("#sKey").value = c.key || ""; $("#sModel").value = c.model || "";
+  syncProvider(); dlg.showModal();
+}
+function syncProvider() {
+  const a = $("#sProvider").value === "anthropic";
+  $("#sModel").placeholder = a ? "claude-sonnet-4-5" : "gemini-flash-latest";
+  $("#sHelp").textContent = "";
+  $("#sHelp").append(a ? "Créez une clé sur " : "Clé gratuite (compte Google) sur ",
+    el("a", { href: a ? "https://console.anthropic.com/settings/keys" : "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener", text: a ? "console.anthropic.com" : "aistudio.google.com/apikey" }),
+    a ? " (payant à l'usage)." : ". Le niveau gratuit suffit pour corriger des copies.");
+}
+$("#sProvider").addEventListener("change", syncProvider);
+$("#keyPill").addEventListener("click", openSettings);
+$("#sCancel").addEventListener("click", () => dlg.close());
+$("#sForm").addEventListener("submit", e => {
+  e.preventDefault();
+  setCfg({ provider: $("#sProvider").value, key: $("#sKey").value.trim(), model: $("#sModel").value.trim() });
+  dlg.close(); refreshKeyPill(); toast(getCfg().key ? "Réglages enregistrés" : "Clé supprimée");
+});
+
+/* ---------- Démarrage ---------- */
+bindSeg("#audience", "audience"); bindSeg("#strict", "strict");
+renderLevels(); renderSubjects(); renderEvals();
+loadExample(); renderHist();
+$("#photoZone").hidden = true;
+
+sample = makeSample(); canImages = true; window.__imgMax = 6; $("#photoZone").hidden = false;
+window.__dl = { save: async ({ filename, data }) => { const a = el("a", { href: URL.createObjectURL(new Blob([data], { type: "text/html" })), download: filename }); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); } };
+window.__canDl = true; refreshKeyPill(); if (S.result) renderResult(S.result, S.ctx, S.isExample);
+if (!getCfg().key) setTimeout(openSettings, 600);
+})();
+</script>
+</body>
+</html>
